@@ -1,0 +1,4 @@
+interface:
+  display_name: "Show Current Model"
+  short_description: "Report the active model's full name and parameters."
+  default_prompt: "Use $show-current-model to show the currently selected model's full name and complete parameters."
