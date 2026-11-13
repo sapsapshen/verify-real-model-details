@@ -1,0 +1,14 @@
+[project]
+name = "verify-real-model-details"
+version = "1.1.0"
+description = "Codex skill that reports the active model's full name and effective parameters."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

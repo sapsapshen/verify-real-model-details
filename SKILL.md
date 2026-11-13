@@ -15,27 +15,26 @@ Detect the active model in the agent IDE and report its complete parameters. Alw
    python <skill-dir>/scripts/show_current_model.py
    ```
 
-   On Windows, fall back to `py <skill-dir>/scripts/show_current_model.py`. Add `--json` for machine-readable output.
+   On Windows, fall back to `py <skill-dir>/scripts/show_current_model.py`. Add `--json` for machine-readable output. If the user is on a Codex profile (`codex --profile NAME`), add `--profile NAME`. That overlays `$CODEX_HOME/NAME.config.toml` on `config.toml`.
 
-   The script reads the agent IDE config (Codex: `$CODEX_HOME/config.toml`, default `~/.codex/config.toml`) to resolve `model`, `model_provider`, `model_reasoning_effort`, and the model catalog path (`model_catalog_json`, fallback `$CODEX_HOME/models.json`), then looks up the model's full parameter entry in the catalog.
+   The script reads `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`) for the top-level `model`, provider, reasoning effort, and catalog path (`model_catalog_json`, fallback `$CODEX_HOME/models.json`). It then loads the matching catalog entry and applies the same metadata overrides Codex applies: `model_context_window` (clamped to `max_context_window`), `model_auto_compact_token_limit`, and `tool_output_token_limit`.
 
-2. If the script cannot resolve the model, detect manually:
-
-   - Inspect `$CODEX_HOME/config.toml` for the top-level `model` key.
-   - Read `model_catalog_json` (or `$CODEX_HOME/models.json`) and find the catalog entry whose `slug`/`id`/`model`/`name` matches.
-   - For IDEs other than Codex, see `references/ides.md`.
+2. If the script cannot resolve a top-level `model`, say so. Do not treat `models.new_thread.model` or a legacy `[profiles.NAME]` table as the active model; current Codex does not either. For IDEs other than Codex, read `references/ides.md`.
 
 3. Report to the user in this required format:
 
-   - First line: the model's full name — `display_name` (and `slug`). This is mandatory even if nothing else is available.
-   - Next: provider name (and `base_url`/`wire_api` when configured) plus the reasoning effort.
-   - Then: the complete parameter list from the catalog as a table (context window, max context window, truncation policy, input modalities, supported reasoning levels, tool support, etc.).
+   - First line: the model's full name — `display_name` (and `slug`). This is mandatory even when the catalog is missing, unreadable, or has no matching entry.
+   - Next: provider id and display name, safe provider fields (`base_url`, `wire_api`), and the reasoning effort.
+   - Then: the effective parameter list (catalog values after config overrides), plus session settings such as reasoning summary, verbosity, and service tier when they are set.
+   - Include the script's warnings. When the catalog has no entry, list the available slugs.
 
 ## Rules
 
 - Always output the model's full name (display name + slug), never only a short alias.
-- Never print API keys, bearer tokens, or other secrets; the script redacts them.
-- Do not include `model_messages`/instruction-template content in the report; it is the system prompt, not a model parameter.
-- If the catalog has no entry for the active model, report the config-level facts (name, provider, reasoning effort), state that the local catalog lacks the entry, and list the available catalog slugs so the user can verify.
+- Never print API keys, bearer tokens, header values, or other secrets. Do not read `auth.json` or resolve `env_key`. The script already omits those fields and strips credentials embedded in URLs.
+- Do not include `model_messages`, `base_instructions`, or other instruction-template content; it is the system prompt, not a model parameter.
+- If the catalog has no entry for the active model, report the config-level facts (name, provider, reasoning effort), state that the local catalog lacks the entry, and list the available catalog slugs.
+- A case-insensitive catalog match is valid only when exactly one entry matches. Do not guess among several.
+- `codex --model` and the desktop model picker can override the file for one session. Name the config file the report came from, and say the value is the configured model when a session override may exist.
 - If parameters come from an external source (provider API, docs), cite the source and mark unverifiable fields as unknown rather than guessing.
 - The script is read-only; it never changes the IDE configuration.
